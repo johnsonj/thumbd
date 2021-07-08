@@ -1,0 +1,21 @@
+poolName: "thumbd"
+accept:
+# Use all drives mounted via USB
+- pathContains: "usb2"
+deny:
+# Iognore a specific vendor's drive
+- vendorContains: "Kings"
+deviceSpec:
+  filesystem: exfat
+  # Tune the filesystem for large files and disable journaling (unsafe!) to speed up provision and writes
+  mkfsOptions: ["-T", "largefile4", "-O", "^has_journal"]
+poolSpec:
+  # Directory to mount the thumb drives
+  deviceMountPath: /mnt/jbod
+  # MergerFS filesystem to join the drives
+  mergerFSMountPath: /tank3
+  directories:
+  # On each thumbdrive, create a directory foobar owned by user:wheel
+  - name: foobar
+    user: user
+    group: wheel
