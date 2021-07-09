@@ -91,9 +91,13 @@ var DefaultConfig = Config{
 	},
 }
 
-var configFile = flag.String("config-file", "/etc/thumbd/config.yaml", "Path to the config file for this instance of thumbd")
+var (
+	configFile = flag.String("config-file", "/etc/thumbd/config.yaml", "Path to the config file for this instance of thumbd")
+	dryRun     = flag.Bool("dry-run", false, "If true, thumbd will exit after evaluating which drives should be part of the pool. This is useful to evaluating Accept/Deny rules in the config file.")
+)
 
 func main() {
+	flag.Parse()
 	config := DefaultConfig
 	fileBytes, err := ioutil.ReadFile(*configFile)
 	if err != nil {
@@ -115,6 +119,12 @@ func main() {
 	devices, err := getDevices(config.Accept, config.Deny)
 	if err != nil {
 		log.Fatalf("Discovering devices: %v", err)
+	}
+
+	if *dryRun {
+		log.Printf("Devices matching rules, these will be wiped (if not already pulled into pool) and merged into the pool:\n%+v", devices)
+		log.Printf("Exiting due to dry-run=true")
+		os.Exit(0)
 	}
 
 	changed, err := provisionDevices(devices, config.PoolName, config.DeviceSpec)
@@ -474,7 +484,7 @@ func mountAndMerge(poolName string, poolSpec PoolSpec, bds []BlockDevice) error 
 		partName := filepath.Base(p.DevicePath)
 		mountPoint := filepath.Join(poolSpec.DeviceMountPath, partName)
 		log.Printf("Mounting %q to system (mountPoint=%q)", partName, mountPoint)
-		err := os.MkdirAll(mountPoint, os.ModeDir)
+		err := os.MkdirAll(mountPoint, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("creating mount point %q: %w", mountPoint, err)
 		}
